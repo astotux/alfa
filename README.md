@@ -2,29 +2,35 @@
 
 ### Создать и заполнить .env по примеру .env.example
 
-### Запуск контейнера с bd
-```bash
-docker compose up -d
-```
-
-### Сделать виртуальное окружение
+### Скачиваем uv
 ```cmd
-python -m venv .venv
+pip install uv
 ```
 
-### Активация виртуальное окружение
+### Далее
 ```cmd
-.venv\Scripts\activate
+uv sync
 ```
 
-### Установить зависимости 
-```bash
-pip install -r requirements.txt
-```
 
 ### Запуск
 ```bash
-python main.py
+uv run src/main.py
 ```
 
 # Frontend
+
+### Скачиваем зависимости
+```bash
+npm i
+```
+
+### Запуск проекта в dev
+```bash
+npm run dev
+```
+
+### build проекта
+```bash
+npm run build
+```

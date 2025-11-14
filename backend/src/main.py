@@ -1,8 +1,11 @@
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from app.services.llm_service import ask_llm, stream_llm
+from api import api_router
+from database import engine
+from models import Base
+from another_fastapi_jwt_auth.exceptions import AuthJWTException
+from fastapi.responses import JSONResponse
+from auth.dependencies import get_jwt_config
 
 app = FastAPI()
 
@@ -15,20 +18,15 @@ app.add_middleware(
     expose_headers=["Content-Type"],
 )
 
-class Message(BaseModel):
-    message: str
-
-@app.get("/api/stream")
-async def stream_get(prompt: str):
-    event_generator = stream_llm(prompt)
-    return StreamingResponse(event_generator, media_type="text/event-stream")
+Base.metadata.create_all(bind=engine)
 
 
-@app.post("/api/chat")
-async def chat_endpoint(msg: Message):
-    response_text = await ask_llm(msg.message)
-    return {"reply": response_text}
+@app.exception_handler(AuthJWTException)
+def authjwt_exception_handler(request, exc: AuthJWTException):
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
+
+app.include_router(api_router)
 
 @app.get("/api/test")
 def test():
