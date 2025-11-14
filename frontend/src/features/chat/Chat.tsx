@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import './../assets/css/chat.css';
+import './chat.css';
 
 type MessageType = {
   type: 'user' | 'bot';
