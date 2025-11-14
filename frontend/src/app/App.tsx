@@ -1,5 +1,4 @@
-import Chat from "@/features/chat/Chat";
-
+import Chat from '@/features/chat/chat';
 
 function App() {
   return (
