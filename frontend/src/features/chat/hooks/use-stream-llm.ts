@@ -16,7 +16,7 @@ export const useStreamLlm = ({
   const { mutate } = useCreateMessage();
 
   const startStream = useCallback(
-    (prompt: string) => {
+    (prompt: string, skipUserMessage = false) => {
       let assistantText = '';
       setAnswer('');
       if (esRef.current) {
@@ -28,12 +28,13 @@ export const useStreamLlm = ({
       const es = new EventSource(url);
       esRef.current = es;
 
-      mutate({ chatId, content: prompt, role: 'user' });
+      if (!skipUserMessage) {
+        mutate({ chatId, content: prompt, role: 'user' });
+      }
 
       es.onmessage = (e) => {
         const raw = e.data;
 
-        // Пропускаем [DONE], это событие завершения стрима
         if (raw === '[DONE]') {
           mutate({ chatId, content: assistantText, role: 'assistant' });
           es.close();
@@ -57,12 +58,12 @@ export const useStreamLlm = ({
         es.close();
       };
     },
-    [chatId, setAnswer]
+    [chatId, setAnswer, mutate]
   );
 
   const handleSubmit = async (prompt: string) => {
     startStream(prompt);
   };
 
-  return { handleSubmit };
+  return { handleSubmit, startStream };
 };
