@@ -1,4 +1,5 @@
 from datetime import timedelta
+from uuid import uuid4
 
 from another_fastapi_jwt_auth import AuthJWT
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,7 +31,7 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
     hashed_pwd = get_password_hash(user_data.password)
     new_user = User(
-        username=user_data.username, email=user_data.email, hashed_password=hashed_pwd
+        username=user_data.username, email=user_data.email, hashed_password=hashed_pwd, id=str(uuid4())
     )
 
     db.add(new_user)

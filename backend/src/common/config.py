@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     DEBUG: bool = False
+    OPENROUTER_API_KEY: str = "api_key"
 
     class Config:
         env_file = ".env"
