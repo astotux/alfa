@@ -5,10 +5,6 @@
 
 html,
 body,
-span,
-applet,
-object,
-iframe,
 h1,
 h2,
 h3,
@@ -16,8 +12,6 @@ h4,
 h5,
 h6,
 p,
-blockquote,
-pre,
 a,
 abbr,
 acronym,
@@ -86,7 +80,7 @@ video {
 	margin: 0;
 	padding: 0;
 	border: 0;
-	font-size: 100%;
+
 	vertical-align: baseline;
 }
 
@@ -113,12 +107,21 @@ body {
 	line-height: 1;
 	background-color: var(--color-background);
 	color: var(--color-foreground);
+	overflow-y: hidden;
 }
 
 ol,
 ul {
 	list-style: none;
 }
+
+ul,
+ol {
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}
+
 
 blockquote,
 q {
@@ -300,7 +303,6 @@ table {
 
 	--animate-fadeIn: fadeIn 0.3s ease-in-out;
 
-
 }
 
 @keyframes fadeIn {
@@ -315,4 +317,14 @@ table {
 		transform: scale(1);
 	}
 
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+
+	body {
+		@apply bg-background text-foreground;
+	}
 }

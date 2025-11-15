@@ -1,3 +1,4 @@
+import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { useState, useRef, useEffect } from 'react';
 
@@ -81,8 +82,8 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-[60%] py-5 ml-auto mr-auto rounded-lg overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-white">
+    <div className="flex flex-col h-full w-[60%] py-5 ml-auto mr-auto rounded-lg overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-[#999]">
             Начните диалог, отправив сообщение
@@ -114,7 +115,7 @@ export default function Chat() {
         <div ref={messagesEndRef} />
       </div>
       <form
-        className="flex p-4 bg-white border-t border-[#e0e0e0]"
+        className="flex p-4 items-center gap-5 border-t border-secondary"
         onSubmit={handleSubmit}
       >
         <input
@@ -122,14 +123,11 @@ export default function Chat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Введите сообщение..."
-          className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-full text-sm outline-none transition-border duration-300"
+          className="flex-1 px-4 py-3 border-2 border-secondary rounded-full text-sm outline-none transition-border duration-300"
         />
-        <button
-          type="submit"
-          className="px-6 py-3 bg-[#EF3124] text-white border-none rounded-full text-sm font-semibold cursor-pointer transition-all duration-200"
-        >
+        <Button className="rounded-2xl" type="submit">
           Отправить
-        </button>
+        </Button>
       </form>
     </div>
   );
