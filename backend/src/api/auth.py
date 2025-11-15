@@ -86,9 +86,13 @@ def refresh(
         subject=username,
         expires_time=timedelta(minutes=settings.access_token_expire_minutes),
     )
+    
+    new_refresh_token = Authorize.create_refresh_token(
+        subject=username, expires_time=timedelta(days=7)
+    )
 
     return {
         "access_token": new_access_token,
-        "refresh_token": "",
+        "refresh_token": new_refresh_token,
         "token_type": "bearer",
     }

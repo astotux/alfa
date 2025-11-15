@@ -1,15 +1,33 @@
 import Chat from '@/features/chat/chat';
+import { Register } from '@/pages';
+import { Login } from '@/pages';
 import { ROUTES } from '@/shared/config/routes';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
+import { PrivateRoute } from './private-route';
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <Routes>
-      <Route index path={ROUTES.CHAT} element={<Chat />} />
-      <Route path={ROUTES.LOGIN} element={<div>Login</div>} />
-      <Route path={ROUTES.REGISTER} element={<div>Register</div>} />
-      <Route path="*" element={<Navigate to={ROUTES.CHAT} />} />
-    </Routes>
+    <QueryClientProvider client={queryClient}>
+      <Routes>
+        <Route
+          element={
+            <PrivateRoute>
+              <Outlet />
+            </PrivateRoute>
+          }
+        >
+          <Route index path={ROUTES.CHAT} element={<Chat />} />
+        </Route>
+        <Route path={ROUTES.LOGIN} element={<Login />} />
+        <Route path={ROUTES.REGISTER} element={<Register />} />
+        <Route path="*" element={<Navigate to={ROUTES.LOGIN} />} />
+      </Routes>
+      <Toaster richColors />
+    </QueryClientProvider>
   );
 }
 

@@ -11,5 +11,6 @@ export const API_URL = {
     login: () => API_URL.root('/auth/login'),
     register: () => API_URL.root('/auth/register'),
     refreshTokens: () => API_URL.root('/auth/refresh'),
+    logout: () => API_URL.root('/auth/logout'),
   },
 };
