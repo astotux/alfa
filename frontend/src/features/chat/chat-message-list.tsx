@@ -16,15 +16,15 @@ export const ChatListMessage = ({ messages, answer }: Props) => {
   }, [messages, answer]);
 
   return (
-    <div className="flex-1 max-h-[83vh] overflow-y-auto flex flex-col gap-10 p-4 no-scrollbar">
+    <div className="flex-1 max-h-[83vh] overflow-y-auto flex flex-col gap-10 p-4 no-scrollbar w-[80vw] md:w-[50vw] lg:w-[50vw] mx-auto">
       {messages.map((message) => (
         <div
           key={message.id}
           className={cn(
             ' px-4 py-2 rounded-xl break-words',
             message.role === 'user'
-              ? 'self-end bg-accent/10 max-w-[70%]'
-              : 'self-start max-w-[80%] md:max-w-[70%] ]'
+              ? 'self-end bg-accent/40 max-w-[70%]'
+              : 'self-start max-w-[80%] md:max-w-[70%] bg-secondary/20'
           )}
         >
           <Markdown>{message.content}</Markdown>
@@ -32,7 +32,7 @@ export const ChatListMessage = ({ messages, answer }: Props) => {
       ))}
 
       {answer && messages[messages.length - 1].role === 'user' && (
-        <div className="max-w-[70%] px-4 py-2 rounded-xl break-words self-start">
+        <div className="max-w-[70%] px-4 py-2 rounded-xl break-words self-start bg-secondary/20">
           <Markdown>{answer}</Markdown>
         </div>
       )}

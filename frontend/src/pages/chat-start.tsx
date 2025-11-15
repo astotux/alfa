@@ -3,26 +3,40 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Send } from 'lucide-react';
 import { useState } from 'react';
+import logo from '/logo.svg';
+import { SuggestionCards } from '@/features/chat/suggestion-cards';
 
 export const ChatStartPage = () => {
   const [prompt, setPrompt] = useState('');
+  const [isChatCreated, setIsChatCreated] = useState(false);
 
   const { mutate } = useCreateChat();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!prompt.trim()) return;
+    setIsChatCreated(true);
     mutate({ question: prompt });
     setPrompt('');
+  };
+
+  const handleSuggestionSelect = (suggestion: string) => {
+    setIsChatCreated(true);
+    mutate({ question: suggestion });
   };
 
   return (
     <div className="h-full flex flex-col items-center justify-center pb-5">
       <div className="flex flex-col items-center pt-40">
-        <h1 className="text-6xl font-bold text-primary/10">Logo AI</h1>
+        <img src={logo} alt="Logo AI" className="w-48 h-48 mb-4 opacity-50" />
       </div>
 
-      <div className="mt-auto w-[50vw]">
-        <form onSubmit={handleSubmit}>
+      <div className="mt-auto w-[50vw] flex flex-col items-center">
+        <SuggestionCards
+          onSelect={handleSuggestionSelect}
+          isVisible={!isChatCreated}
+        />
+        <form onSubmit={handleSubmit} className="w-full">
           <div className="flex items-center gap-3">
             <Input
               className="rounded-xl h-10"

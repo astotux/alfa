@@ -8,15 +8,9 @@ import { Link } from 'react-router-dom';
 
 import { SidebarCollapse } from './sidebar-collapse';
 import { useGetChats } from '@/shared/hooks/queries/chat/use-get-chats';
-import { ROUTES } from '@/shared/config/routes';
 
 export const Sidebar = () => {
-  const { data: chats = [], isLoading } = useGetChats();
-
-  const chatsData = chats.map((chat) => ({
-    title: chat.title,
-    link: `${ROUTES.CHAT}/${chat.id}`,
-  }));
+  const { data: chatsData = [], isLoading } = useGetChats();
 
   return (
     <SidebarMain>
