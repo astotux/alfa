@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, Integer
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import (
     Mapped, mapped_column
@@ -18,6 +18,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    telegram_id = Column(Integer, nullable=True, unique=True, index=True)
 
     def __repr__(self):
         return f"<User {self.username}>"

@@ -5,6 +5,10 @@ class UserService {
   async getProfile() {
     return await axiosWithAuth.get(API_URL.user.getProfile());
   }
+
+  async getSyncToken() {
+    return await axiosWithAuth.post(API_URL.user.getSyncToken());
+  }
 }
 
 export const userService = new UserService();

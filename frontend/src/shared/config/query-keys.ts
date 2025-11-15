@@ -1,6 +1,7 @@
 export const QUERY_KEYS = {
   USER: {
     GET_PROFILE: 'getProfile',
+    GET_SYNC_TOKEN: 'getSyncToken',
   },
   AUTH: {
     REGISTER: 'register',
