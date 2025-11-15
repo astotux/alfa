@@ -10,7 +10,7 @@ import { Ellipsis, Trash } from 'lucide-react';
 
 export const Header = () => {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between border-b px-4 pb-3">
       <SidebarTrigger />
       <div>
         <DropdownMenu>

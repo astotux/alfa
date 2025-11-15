@@ -6,9 +6,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <SidebarProvider>
       <Sidebar />
-      <main className="w-full flex flex-col p-4">
+      <main className="w-full flex flex-col py-3">
         <Header />
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 px-4">{children}</div>
       </main>
     </SidebarProvider>
   );

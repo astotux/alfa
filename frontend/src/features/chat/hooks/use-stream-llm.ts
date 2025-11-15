@@ -1,28 +1,24 @@
-import { axiosClassic } from '@/shared/api/api';
+import { useCreateMessage } from '@/shared/hooks/queries/chat/use-create-message';
 import type { CreateMessageDto } from '@/shared/types/chat.type';
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  type Dispatch,
-  type SetStateAction,
-} from 'react';
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 
 export const useStreamLlm = ({
-  firstMessage,
+  chatId,
 
   setAnswer,
 }: {
-  firstMessage: string;
+
   chatId: string;
   setAnswer: Dispatch<SetStateAction<string>>;
-  answer: string;
-  createMessage: (data: CreateMessageDto) => void;
 }) => {
   const esRef = useRef<EventSource | null>(null);
 
+  const { mutate } = useCreateMessage();
+
   const startStream = useCallback(
     (prompt: string) => {
+      let assistantText = '';
+      setAnswer('');
       if (esRef.current) {
         esRef.current.close();
       }
@@ -32,37 +28,41 @@ export const useStreamLlm = ({
       const es = new EventSource(url);
       esRef.current = es;
 
+      mutate({ chatId, content: prompt, role: 'user' });
+
       es.onmessage = (e) => {
+        const raw = e.data;
+
+        // Пропускаем [DONE], это событие завершения стрима
+        if (raw === '[DONE]') {
+          mutate({ chatId, content: assistantText, role: 'assistant' });
+          es.close();
+          return;
+        }
+
         try {
-          const obj = JSON.parse(e.data);
-
-          const text = obj?.choices?.[0]?.delta?.content;
-
-          setAnswer((prev) => prev + text);
+          const obj = JSON.parse(raw);
+          const text = obj?.delta;
+          if (text) {
+            assistantText += text;
+            setAnswer((prev) => prev + text);
+          }
         } catch (err) {
-          console.log('raw data:', e.data);
+          console.error('Failed to parse SSE data:', raw, err);
         }
       };
-
-      es.addEventListener('done', (e) => {
-        console.log('stream done');
-        // createMessage({ chatId, content: answer, role: 'assistant' });
-        es.close();
-      });
 
       es.onerror = (err) => {
         console.error('EventSource error', err);
         es.close();
       };
     },
-    [prompt]
+    [chatId, setAnswer]
   );
 
   const handleSubmit = async (prompt: string) => {
     startStream(prompt);
   };
-
- 
 
   return { handleSubmit };
 };
