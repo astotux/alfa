@@ -19,6 +19,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDeleteChat } from '@/shared/hooks/queries/chat/use-delete-chat';
 import { useGetSyncToken } from '@/shared/hooks/queries/user/use-get-sync-token';
+import { useGetProfile } from '@/shared/hooks/queries/user/use-get-profile';
 
 export const Header = () => {
   const { id } = useParams();
@@ -27,6 +28,9 @@ export const Header = () => {
   const [syncToken, setSyncToken] = useState<string | null>(null);
   const { mutate: deleteChat, isPending } = useDeleteChat();
   const { mutate: getSyncToken, isPending: isTokenLoading } = useGetSyncToken();
+  const { data: profile } = useGetProfile();
+  
+  const isSynced = profile?.data?.telegram_id !== null && profile?.data?.telegram_id !== undefined;
 
   const handleDelete = () => {
     if (id) {
@@ -35,9 +39,9 @@ export const Header = () => {
     }
   };
 
-  // При открытии меню автоматически получаем токен
+  // При открытии меню автоматически получаем токен, если пользователь не синхронизирован
   useEffect(() => {
-    if (dropdownOpen && !syncToken && !isTokenLoading) {
+    if (dropdownOpen && !syncToken && !isTokenLoading && !isSynced) {
       getSyncToken(undefined, {
         onSuccess: (response) => {
           const token = response.data.token;
@@ -46,9 +50,9 @@ export const Header = () => {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dropdownOpen]);
+  }, [dropdownOpen, isSynced]);
 
-  const telegramLink = syncToken 
+  const telegramLink = syncToken && !isSynced
     ? `https://t.me/alfaassistant_bot?start=${syncToken}`
     : null;
 
