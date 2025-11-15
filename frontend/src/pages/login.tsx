@@ -1,5 +1,5 @@
 import { LoginForm } from '@/features';
 
-export const Login = () => {
+export const LoginPage = () => {
   return <LoginForm />;
 };

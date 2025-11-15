@@ -6,4 +6,10 @@ export const QUERY_KEYS = {
     REGISTER: 'register',
     LOGIN: 'login',
   },
+  CHAT: {
+    CREATE_CHAT: 'createChat',
+    GET_CHAT: 'getChat',
+    DELETE_CHAT: 'deleteChat',
+    CREATE_MESSAGE: 'createMessage',
+  }
 };

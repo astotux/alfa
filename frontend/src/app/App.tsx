@@ -1,6 +1,5 @@
-import Chat from '@/features/chat/chat';
-import { Register } from '@/pages';
-import { Login } from '@/pages';
+import { ChatPage, ChatStartPage, RegisterPage } from '@/pages';
+import { LoginPage } from '@/pages';
 import { ROUTES } from '@/shared/config/routes';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,10 +22,11 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route index path={ROUTES.CHAT} element={<Chat />} />
+          <Route index path={ROUTES.CHAT} element={<ChatStartPage />} />
+          <Route index path={ROUTES.CHAT_ID} element={<ChatPage />} />
         </Route>
-        <Route path={ROUTES.LOGIN} element={<Login />} />
-        <Route path={ROUTES.REGISTER} element={<Register />} />
+        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+        <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
         <Route path="*" element={<Navigate to={ROUTES.LOGIN} />} />
       </Routes>
       <Toaster richColors />

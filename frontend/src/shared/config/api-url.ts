@@ -6,6 +6,9 @@ export const API_URL = {
   chat: {
     getChats: () => API_URL.root('/chat/'),
     getCurrentChat: (id: string) => API_URL.root(`/chat/${id}`),
+    createChat: () => API_URL.root(`/chat`),
+    deleteChat: () => API_URL.root(`/chat`),
+    createMessage: () => API_URL.root(`/message`),
   },
   auth: {
     login: () => API_URL.root('/auth/login'),
