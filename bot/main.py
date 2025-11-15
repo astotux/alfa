@@ -1,27 +1,31 @@
+import asyncio
+import logging
 import os
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message
-from aiogram.utils import executor
 from dotenv import load_dotenv
-import requests
 
 load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api/test")
 
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(bot)
 
-@dp.message_handler(commands=["start"])
-async def start_command(message: Message):
-    await message.reply("Привет! Я ваш бизнес-ассистент.")
+from aiogram import Bot, Dispatcher
+from handlers import document_handler, message_handler
 
-@dp.message_handler()
-async def echo(message: Message):
-    # Отправляем текст на Backend
-    response = requests.get(API_URL)
-    data = response.json()
-    await message.reply(f"Ответ Backend: {data['message']}")
+
+async def main():
+    logging.basicConfig(level=logging.INFO)
+
+    token = os.getenv("TELEGRAM_TOKEN")
+    if not token:
+        raise ValueError("❌ TELEGRAM_TOKEN не найден в .env файле!")
+
+    bot = Bot(token=token)
+    dp = Dispatcher()
+
+    dp.include_router(message_handler.router)
+    dp.include_router(document_handler.router)
+
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(main())
