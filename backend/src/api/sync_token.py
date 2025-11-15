@@ -17,20 +17,15 @@ def create_sync_token(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if user.telegram_id:
-        user_identifier = user.telegram_id
-    else:
-        user_identifier = abs(hash(user.id)) % (2**31)
-
     db.query(SyncToken).filter(
-        SyncToken.user_id == user_identifier
+        SyncToken.user_id == user.id
     ).delete()
 
     token = secrets.token_urlsafe(32)
     
     sync_token = SyncToken(
         token=token,
-        user_id=user_identifier,
+        user_id=user.id,
         created_at=datetime.now()
     )
     
