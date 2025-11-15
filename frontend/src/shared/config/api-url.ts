@@ -2,6 +2,7 @@ export const API_URL = {
   root: (url = '') => `${url ? url : ''}`,
   user: {
     getProfile: () => API_URL.root('/user/profile'),
+    getSyncToken: () => API_URL.root('/user/sync-token'),
   },
   chat: {
     getChats: () => API_URL.root('/chats'),

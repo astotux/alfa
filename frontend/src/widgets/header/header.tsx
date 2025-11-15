@@ -14,15 +14,19 @@ import {
 } from '@/shared/ui/dialog';
 import { SidebarTrigger } from '@/shared/ui/sidebar';
 import { cn } from '@/shared/utils/cn';
-import { Ellipsis, Trash } from 'lucide-react';
-import { useState } from 'react';
+import { Ellipsis, Trash, Link2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDeleteChat } from '@/shared/hooks/queries/chat/use-delete-chat';
+import { useGetSyncToken } from '@/shared/hooks/queries/user/use-get-sync-token';
 
 export const Header = () => {
   const { id } = useParams();
   const [open, setOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [syncToken, setSyncToken] = useState<string | null>(null);
   const { mutate: deleteChat, isPending } = useDeleteChat();
+  const { mutate: getSyncToken, isPending: isTokenLoading } = useGetSyncToken();
 
   const handleDelete = () => {
     if (id) {
@@ -31,21 +35,29 @@ export const Header = () => {
     }
   };
 
-  // Показываем кнопку удаления только если есть ID чата
-  if (!id) {
-    return (
-      <div className="flex items-center justify-between border-b px-4 pb-3">
-        <SidebarTrigger />
-      </div>
-    );
-  }
+  // При открытии меню автоматически получаем токен
+  useEffect(() => {
+    if (dropdownOpen && !syncToken && !isTokenLoading) {
+      getSyncToken(undefined, {
+        onSuccess: (response) => {
+          const token = response.data.token;
+          setSyncToken(token);
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dropdownOpen]);
+
+  const telegramLink = syncToken 
+    ? `https://t.me/alfaassistant_bot?start=${syncToken}`
+    : null;
 
   return (
     <>
       <div className="flex items-center justify-between border-b px-4 pb-3">
         <SidebarTrigger />
         <div>
-          <DropdownMenu>
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost">
                 <Ellipsis className="size-5" />
@@ -55,10 +67,28 @@ export const Header = () => {
               className="w-fit min-w-40 p-2 rounded-2xl"
               align="end"
             >
-              <DropdownAction type="dandger" onClick={() => setOpen(true)}>
-                <Trash className="size-4" />
-                <p className="text-sm">Удалить</p>
-              </DropdownAction>
+              {telegramLink && (
+                <DropdownAction
+                  type="default"
+                  onClick={() => {
+                    window.open(telegramLink, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  <Link2 className="size-4" />
+                  <p className="text-sm">Синхронизировать с ТГ ботом</p>
+                </DropdownAction>
+              )}
+              {!telegramLink && isTokenLoading && (
+                <DropdownAction type="default" onClick={() => {}}>
+                  <p className="text-sm">Загрузка...</p>
+                </DropdownAction>
+              )}
+              {id && (
+                <DropdownAction type="dandger" onClick={() => setOpen(true)}>
+                  <Trash className="size-4" />
+                  <p className="text-sm">Удалить чат</p>
+                </DropdownAction>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
