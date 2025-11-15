@@ -2,11 +2,9 @@ import aiosqlite
 import os
 from dotenv import load_dotenv
 
-# Загружаем .env, чтобы получить путь к БД
 load_dotenv()
 
-# Получаем путь из .env или используем "bot.db" как fallback
-DATABASE_PATH = os.getenv("DATABASE_PATH", "bot.db")
+DATABASE_PATH = os.getenv("DATABASE_PATH")
 
 class DBService:
     def __init__(self, db_path: str):
@@ -21,7 +19,7 @@ class DBService:
             row = await cursor.fetchone()
             return row[0] if row else None
 
-    async def update_telegram_id(self, user_id: int, telegram_id: int):
+    async def update_telegram_id(self, user_id: str, telegram_id: int):
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "UPDATE users SET telegram_id = ? WHERE id = ?",
