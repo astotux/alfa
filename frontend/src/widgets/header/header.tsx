@@ -48,7 +48,7 @@ export const Header = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dropdownOpen]);
 
-  const telegramLink = syncToken 
+  const telegramLink = syncToken
     ? `https://t.me/alfaassistant_bot?start=${syncToken}`
     : null;
 

@@ -1,5 +1,5 @@
-import { ChatListMessage } from '@/features/chat/chat-message-list';
-import { PromptInput } from '@/features/chat/prompt-input';
+import { ChatListMessage } from '@/features';
+import { PromptInput } from '@/features';
 import { useGetChat } from '@/shared/hooks/queries/chat/use-get-chat';
 import { useStreamLlm } from '@/features/chat/hooks/use-stream-llm';
 import { useState, useEffect, useRef } from 'react';
@@ -18,7 +18,11 @@ export const ChatPage = () => {
   });
 
   useEffect(() => {
-    if (data?.messages && data.messages.length === 1 && !hasAutoStartedRef.current) {
+    if (
+      data?.messages &&
+      data.messages.length === 1 &&
+      !hasAutoStartedRef.current
+    ) {
       const userMessage = data.messages[0];
 
       if (userMessage.role === 'user') {
