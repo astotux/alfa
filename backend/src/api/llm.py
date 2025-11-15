@@ -13,7 +13,15 @@ class Message(BaseModel):
 @router.get("/api/stream")
 async def stream_get(prompt: str):
     event_generator = stream_llm(prompt)
-    return StreamingResponse(event_generator, media_type="text/event-stream")
+    return StreamingResponse(
+    event_generator,
+    media_type="text/event-stream",
+    headers={
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",  # Отключает буферизацию в nginx
+    }
+)
 
 
 @router.post("/api/chat")

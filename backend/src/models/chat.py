@@ -42,8 +42,7 @@ class Message(Base):
     id: Mapped[str] = mapped_column(
         String, primary_key=True
     )
-    
-    userId: Mapped[str] = mapped_column(String)
+
     
     chatId: Mapped[str] = mapped_column(
         ForeignKey("chats.id", ondelete="CASCADE")

@@ -24,16 +24,9 @@ def create_chat(chat_data: CreateChat, db: Session = Depends(get_db), user: User
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Введите текст сообщения"
         )
-    
-    chatExisted = db.query(Chat).filter(Chat.id == chat_data.id).first()
-    if chatExisted:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Чат с таким ID уже существует"
-        )
 
     new_chat = Chat(
-        id=chat_data.id,
+        id=str(uuid4()),
         userId=user.id,
         title=chat_data.question,      
     )
@@ -46,7 +39,7 @@ def create_chat(chat_data: CreateChat, db: Session = Depends(get_db), user: User
         id=str(uuid4()),
         chatId=new_chat.id,
         role=MessageRole.user,
-        content=chat_data.question
+        content=chat_data.question,
     )
 
     db.add(user_msg)
@@ -87,16 +80,15 @@ def get_user_chats(
         for c in chats
     ]
     
-@router.get("/chats/{chat_id}")
+@router.get("/chat/{chat_id}")
 def get_current_chat(
     chat_id: str,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
     chat = (
-        db.query(Chat.id, Chat.title, Chat.createdAt, Chat.updatedAt)
-        .filter(Chat.userId == user.id, Chat.id == chat_id)  # ✅ исправлено
-        .order_by(Chat.updatedAt.desc())
+        db.query(Chat)
+        .filter(Chat.userId == user.id, Chat.id == chat_id)
         .first()
     )
     
@@ -106,7 +98,19 @@ def get_current_chat(
             detail="Чат не найден"
         )
 
-    return chat
+    return {
+        "chatId": chat.id,
+        "title": chat.title,
+        "messages": [
+            {
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+                "createdAt": m.createdAt,
+            }
+            for m in chat.messages
+        ]
+    }
     
 @router.delete("/chat/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chat(
@@ -133,7 +137,7 @@ def delete_chat(
 
     return
   
-@router.post("/messages", status_code=status.HTTP_201_CREATED)
+@router.post("/message", status_code=status.HTTP_201_CREATED)
 def create_message(
     data: CreateMessage,
     db: Session = Depends(get_db),
@@ -153,36 +157,25 @@ def create_message(
             detail="Нет доступа к этому чату"
         )
 
-    user_message = Message(
+    message = Message(
         id=str(uuid4()),
         chatId=chat.id,
-        role=MessageRole.user,
+        role=data.role,
         content=data.content
     )
-    db.add(user_message)
+    db.add(message)
 
-    chat.updatedAt = datetime.utcnow()
+    chat.updatedAt = datetime.now()
 
     db.commit()
-    db.refresh(user_message)
+    db.refresh(message)
 
-    # ai_answer = ask_ai(data.content)
-
-    # ai_message = Message(
-    #     id=str(uuid4()),
-    #     chatId=chat.id,
-    #     role=MessageRole.assistant,
-    #     content=ai_answer
-    # )
-    # db.add(ai_message)
-    # db.commit()
-    # db.refresh(ai_message)
 
     return {
         "userMessage": {
-            "id": user_message.id,
-            "role": user_message.role.value,
-            "content": user_message.content,
-            "createdAt": user_message.createdAt
+            "id": message.id,
+            "role": message.role.value,
+            "content": message.content,
+            "createdAt": message.createdAt
         },
     }

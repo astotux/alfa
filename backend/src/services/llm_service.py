@@ -10,7 +10,7 @@ from common.config import settings
 from sqlalchemy.orm import Session
 
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 async def ask_llm(user_message: str) -> str:
@@ -34,68 +34,63 @@ async def ask_llm(user_message: str) -> str:
         return f"Ошибка API: {response.status_code} {response.text}"
 
 
-def stream_llm(chat_id: str, user_message: str, db: Session, user: User):
-    chat = db.query(Chat).filter(Chat.id == chat_id).first()
-    if not chat or chat.userId != user.id:
-        raise HTTPException(status_code=404, detail="Чат не найден или нет доступа")
-
-
-    user_msg = Message(
-        id=str(uuid4()),
-        chatId=chat.id,
-        role=MessageRole.user,
-        content=user_message,
-        createdAt=datetime.now()
-    )
-    db.add(user_msg)
-    chat.updatedAt = datetime.now()
-    db.commit()
-    db.refresh(user_msg)
-
-
+def stream_llm(prompt: str):
+    headers = {
+        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": True,
+        "max_tokens": 400,
+    }
     async def event_generator():
-        ai_content = ""  
-
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": "meta-llama/llama-3.3-70b-instruct:free",
-            "messages": [{"role": "user", "content": user_message}],
-            "stream": True,
-            "max_tokens": 400,
-        }
-
-        async with httpx.AsyncClient(timeout=None) as client:
-            async with client.stream("POST", OPENROUTER_URL, headers=headers, json=payload) as resp:
-                async for raw_line in resp.aiter_lines():
-                    if not raw_line:
-                        continue
-                    line = raw_line.strip()
-                    if line.startswith("data:"):
-                        data = line[len("data:"):].strip()
-                        if data == "[DONE]":
-                            break
-                        try:
-                            obj = json.loads(data)
-                        except Exception:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST", 
+                    OPENROUTER_URL, 
+                    headers=headers, 
+                    json=payload
+                ) as resp:
+                    if resp.status_code != 200:
+                        error_text = await resp.aread()
+                        yield f"data: {json.dumps({'error': error_text.decode()})}\n\n"
+                        return
+                    
+                    async for raw_line in resp.aiter_lines():
+                        if not raw_line:
                             continue
-                        if obj.get("type") == "response.content_part.delta":
-                            delta = obj.get("delta") or obj.get("part", {}).get("text")
-                            if delta:
-                                ai_content += delta
-                                yield f"data: {json.dumps({'delta': delta})}\n\n"
-
-        ai_msg = Message(
-            id=str(uuid4()),
-            chatId=chat.id,
-            role=MessageRole.assistant,
-            content=ai_content,
-            createdAt=datetime.utcnow()
-        )
-        db.add(ai_msg)
-        db.commit()
-        yield "event: done\ndata: [DONE]\n\n"
+                        
+                        line = raw_line.strip()
+                        
+                        if line.startswith("data:"):
+                            data = line[5:].strip()  # Убираем "data:" префикс
+                            
+                            if data == "[DONE]":
+                                yield "data: [DONE]\n\n"
+                                break
+                            
+                            try:
+                                obj = json.loads(data)
+                                
+                                # OpenRouter использует формат OpenAI
+                                if "choices" in obj:
+                                    delta = obj["choices"][0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    
+                                    if content:
+                                        yield f"data: {json.dumps({'delta': content})}\n\n"
+                                else:
+                                    # Если другая структура - отправляем как есть
+                                    yield f"data: {json.dumps(obj)}\n\n"
+                                    
+                            except json.JSONDecodeError as e:
+                                yield f"data: {json.dumps({'error': f'JSON parse error: {str(e)}'})}\n\n"
+                                continue
+                                
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return event_generator()
