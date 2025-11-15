@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 
 export const useGetChat = (id: string) => {
   const query = useQuery({
-    queryKey: [QUERY_KEYS.CHAT.GET_CHAT],
+    queryKey: [QUERY_KEYS.CHAT.GET_CHAT, id],
     queryFn: () => chatService.getChat({ id: id || '' }),
     enabled: !!id,
     select: (data) => data.data,

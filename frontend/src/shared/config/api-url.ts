@@ -4,10 +4,10 @@ export const API_URL = {
     getProfile: () => API_URL.root('/user/profile'),
   },
   chat: {
-    getChats: () => API_URL.root('/chat/'),
+    getChats: () => API_URL.root('/chats'),
     getCurrentChat: (id: string) => API_URL.root(`/chat/${id}`),
     createChat: () => API_URL.root(`/chat`),
-    deleteChat: () => API_URL.root(`/chat`),
+    deleteChat: (id: string) => API_URL.root(`/chat/${id}`),
     createMessage: () => API_URL.root(`/message`),
   },
   auth: {

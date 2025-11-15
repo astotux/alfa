@@ -22,3 +22,12 @@ export type CreateMessageDto = {
   content: string;
   chatId: string;
 }
+
+export type ChatListItem = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GetChatsResponse = ChatListItem[];

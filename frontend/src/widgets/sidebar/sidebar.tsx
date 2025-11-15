@@ -10,22 +10,16 @@ import { sidebarConfig } from './sidebar.config';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/shared/utils/cn';
 import { SidebarCollapse } from './sidebar-collapse';
+import { useGetChats } from '@/shared/hooks/queries/chat/use-get-chats';
+import { ROUTES } from '@/shared/config/routes';
 
 export const Sidebar = () => {
-  const chats = [
-    {
-      title: 'Мой первый промт в этом приложении',
-      link: '/chat/1',
-    },
-    {
-      title: 'Как сделать чат в этом приложении',
-      link: '/chat/2',
-    },
-    {
-      title: 'Как получить ответ от AI в этом приложении',
-      link: '/chat/3',
-    },
-  ];
+  const { data: chats = [], isLoading } = useGetChats();
+
+  const chatsData = chats.map((chat) => ({
+    title: chat.title,
+    link: `${ROUTES.CHAT}/${chat.id}`,
+  }));
 
   return (
     <SidebarMain>
@@ -41,7 +35,9 @@ export const Sidebar = () => {
             </Link>
           </SidebarMenuItem>
         ))}
-        <SidebarCollapse data={chats} title="Чаты" />
+        {!isLoading && chatsData.length > 0 && (
+          <SidebarCollapse data={chatsData} title="Чаты" />
+        )}
       </SidebarContent>
     </SidebarMain>
   );

@@ -10,8 +10,13 @@ export const useCreateMessage = () => {
     mutationKey: [QUERY_KEYS.CHAT.CREATE_MESSAGE],
     mutationFn: (dto: CreateMessageDto) => chatService.createMessage(dto),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CHAT.GET_CHAT] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ 
+        queryKey: [QUERY_KEYS.CHAT.GET_CHAT, variables.chatId] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: [QUERY_KEYS.CHAT.GET_CHATS] 
+      });
     },
   });
 

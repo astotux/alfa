@@ -5,9 +5,14 @@ import type {
   CreateChatResponse,
   CreateMessageDto,
   GetChatResponse,
+  GetChatsResponse,
 } from '@/shared/types/chat.type';
 
 class ChatService {
+  async getChats() {
+    return await axiosWithAuth.get<GetChatsResponse>(API_URL.chat.getChats());
+  }
+
   async getChat({ id }: { id: string }) {
     return await axiosWithAuth.get<GetChatResponse>(
       API_URL.chat.getCurrentChat(id)
@@ -22,7 +27,7 @@ class ChatService {
   }
 
   async deleteChat({ id }: { id: string }) {
-    return await axiosWithAuth.post(API_URL.chat.createChat());
+    return await axiosWithAuth.delete(API_URL.chat.deleteChat(id));
   }
 
   async createMessage(dto: CreateMessageDto) {
