@@ -86,6 +86,19 @@ class DBService:
             )
             row = await cursor.fetchone()
             return row[0] if row else None
+    
+    async def get_username_by_telegram_id(self, telegram_id: int):
+        """Получает username по telegram_id"""
+        if not self.db_path:
+            raise ValueError("Путь к базе данных не установлен")
+        
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT username FROM users WHERE telegram_id = ?",
+                (telegram_id,)
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else None
 
     async def get_user_chats(self, user_id: str):
         """Получает список чатов пользователя"""

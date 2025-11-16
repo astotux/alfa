@@ -10,7 +10,7 @@ from .sessions import sync_sessions, user_chat_sessions
 router = Router()
 
 
-@router.message(F.text == "🗑️ Очистить историю")
+@router.message(F.text == "🆕 Новый диалог")
 async def clear_history(message: Message):
     """Обрабатывает нажатие на кнопку 'Очистить историю'"""
     telegram_id = message.from_user.id
@@ -23,7 +23,7 @@ async def clear_history(message: Message):
     await message.answer("✅ История диалога успешно очищена!", reply_markup=main_kb)
 
 
-@router.message(F.text == "📥 Синхронизировать диалог")
+@router.message(F.text == "📥 Список чатов")
 async def sync_dialog(message: Message):
     """Показывает список диалогов для синхронизации с пагинацией"""
     telegram_id = message.from_user.id

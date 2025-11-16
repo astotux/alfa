@@ -13,18 +13,16 @@ import { ROUTES } from '@/shared/config/routes';
 export const ChatStartPage = () => {
   const [prompt, setPrompt] = useState('');
   const [isChatCreated, setIsChatCreated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [showRiskVisionSuggestions, setShowRiskVisionSuggestions] = useState(true);
   const location = useLocation();
   
   const isRiskVision = location.pathname.startsWith(ROUTES.RISK_VISION);
-  const { mutate } = useCreateChat(isRiskVision ? ROUTES.RISK_VISION : ROUTES.CHAT);
+  const { mutate, isPending: isLoading } = useCreateChat(isRiskVision ? ROUTES.RISK_VISION : ROUTES.CHAT);
 
   useEffect(() => {
     if (location.pathname === ROUTES.CHAT || location.pathname === ROUTES.RISK_VISION) {
       setPrompt('');
       setIsChatCreated(false);
-      setIsLoading(false);
       setShowRiskVisionSuggestions(true);
     }
   }, [location.pathname]);
@@ -32,7 +30,6 @@ export const ChatStartPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || isLoading) return;
-    setIsLoading(true);
     setIsChatCreated(true);
     mutate({ question: prompt, chat_type: isRiskVision ? 'risk_vision' : 'general' });
     setPrompt('');
@@ -40,7 +37,6 @@ export const ChatStartPage = () => {
 
   const handleSuggestionSelect = (suggestion: string) => {
     if (isLoading) return;
-    setIsLoading(true);
     setIsChatCreated(true);
     mutate({ question: suggestion, chat_type: isRiskVision ? 'risk_vision' : 'general' });
   };
@@ -92,6 +88,7 @@ export const ChatStartPage = () => {
               onChange={(e) => setPrompt(e.target.value)}
               value={prompt}
               disabled={isLoading}
+              readOnly={isLoading}
               placeholder={isLoading ? "Думаю над ответом..." : isRiskVision ? "Опишите вашу бизнес-идею, существующий бизнес или план действий..." : ""}
             />
             <Button
