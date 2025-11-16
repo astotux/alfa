@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from services.llm_service import ask_llm, stream_llm
 from database.database import get_db
-from models.chat import Chat, Message as ChatMessage
+from models.chat import Chat, Message as ChatMessage, ChatType
 from auth.dependencies import get_current_user
 from models.user import User
 
@@ -49,8 +49,12 @@ async def stream_get(
                 "role": msg.role.value,
                 "content": msg.content
             })
+        
+        chat_type = chat.chatType.value if chat.chatType else "general"
+    else:
+        chat_type = "general"
     
-    event_generator = stream_llm(prompt, message_history)
+    event_generator = stream_llm(prompt, message_history, chat_type)
     return StreamingResponse(
         event_generator,
         media_type="text/event-stream",

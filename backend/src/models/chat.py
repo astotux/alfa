@@ -14,6 +14,11 @@ class MessageRole(enum.Enum):
     assistant = "assistant"
 
 
+class ChatType(enum.Enum):
+    general = "general"
+    risk_vision = "risk_vision"
+
+
 class Chat(Base):
     __tablename__ = "chats"
 
@@ -22,6 +27,9 @@ class Chat(Base):
     )
     title: Mapped[str|None] = mapped_column(String, nullable=True)
     userId: Mapped[str] = mapped_column(String)
+    chatType: Mapped[ChatType] = mapped_column(
+        Enum(ChatType), default=ChatType.general
+    )
 
     createdAt: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now

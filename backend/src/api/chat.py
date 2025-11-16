@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from another_fastapi_jwt_auth import AuthJWT
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette import status
@@ -11,7 +11,7 @@ from auth.dependencies import get_current_user
 
 from models.user import User
 from database.database import get_db
-from models.chat import Chat, Message, MessageRole
+from models.chat import Chat, Message, MessageRole, ChatType
 from schemas.chat import CreateChat, CreateMessage
 
 router = APIRouter()
@@ -25,10 +25,15 @@ def create_chat(chat_data: CreateChat, db: Session = Depends(get_db), user: User
             detail="Введите текст сообщения"
         )
 
+    chat_type = ChatType.general
+    if chat_data.chat_type == "risk_vision":
+        chat_type = ChatType.risk_vision
+    
     new_chat = Chat(
         id=str(uuid4()),
         userId=user.id,
-        title=chat_data.question,      
+        title=chat_data.question,
+        chatType=chat_type,
     )
 
     db.add(new_chat)
@@ -60,15 +65,22 @@ def create_chat(chat_data: CreateChat, db: Session = Depends(get_db), user: User
 
 @router.get("/chats")
 def get_user_chats(
+    chat_type: str = Query(None, description="Тип чата: general или risk_vision"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    chats = (
-        db.query(Chat.id, Chat.title, Chat.createdAt, Chat.updatedAt)
+    query = (
+        db.query(Chat.id, Chat.title, Chat.createdAt, Chat.updatedAt, Chat.chatType)
         .filter(Chat.userId == user.id)
-        .order_by(Chat.updatedAt.desc())
-        .all()
     )
+    
+    if chat_type:
+        if chat_type == "general":
+            query = query.filter(Chat.chatType == ChatType.general)
+        elif chat_type == "risk_vision":
+            query = query.filter(Chat.chatType == ChatType.risk_vision)
+    
+    chats = query.order_by(Chat.updatedAt.desc()).all()
 
     return [
         {
@@ -76,6 +88,7 @@ def get_user_chats(
             "title": c.title,
             "createdAt": c.createdAt,
             "updatedAt": c.updatedAt,
+            "chatType": c.chatType.value if c.chatType else "general",
         }
         for c in chats
     ]

@@ -2,23 +2,39 @@ import { useCreateChat } from '@/shared/hooks/queries/chat/use-create-chat';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Send } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import logo from '/logo.svg';
+import logoRiskVision from '/logo_riskvision.svg';
 import { SuggestionCards } from '@/features/chat/suggestion-cards';
+import { RiskVisionSuggestionCards } from '@/features/chat/risk-vision-suggestion-cards';
+import { ROUTES } from '@/shared/config/routes';
 
 export const ChatStartPage = () => {
   const [prompt, setPrompt] = useState('');
   const [isChatCreated, setIsChatCreated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showRiskVisionSuggestions, setShowRiskVisionSuggestions] = useState(true);
+  const location = useLocation();
+  
+  const isRiskVision = location.pathname.startsWith(ROUTES.RISK_VISION);
+  const { mutate } = useCreateChat(isRiskVision ? ROUTES.RISK_VISION : ROUTES.CHAT);
 
-  const { mutate } = useCreateChat();
+  useEffect(() => {
+    if (location.pathname === ROUTES.CHAT || location.pathname === ROUTES.RISK_VISION) {
+      setPrompt('');
+      setIsChatCreated(false);
+      setIsLoading(false);
+      setShowRiskVisionSuggestions(true);
+    }
+  }, [location.pathname]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || isLoading) return;
     setIsLoading(true);
     setIsChatCreated(true);
-    mutate({ question: prompt });
+    mutate({ question: prompt, chat_type: isRiskVision ? 'risk_vision' : 'general' });
     setPrompt('');
   };
 
@@ -26,27 +42,49 @@ export const ChatStartPage = () => {
     if (isLoading) return;
     setIsLoading(true);
     setIsChatCreated(true);
-    mutate({ question: suggestion });
+    mutate({ question: suggestion, chat_type: isRiskVision ? 'risk_vision' : 'general' });
+  };
+
+  const handleRiskVisionSuggestionSelect = (suggestion: string) => {
+    setPrompt(suggestion);
+    setShowRiskVisionSuggestions(false);
   };
 
   return (
     <div className="h-full flex flex-col items-center justify-center pb-5">
       <div className="flex flex-col items-center pt-40">
-        <img src={logo} alt="Logo AI" className="w-48 h-48 mb-4 opacity-50" />
-        <div className="text-center max-w-xl px-6">
-          <p className="text-foreground/60 text-sm leading-relaxed">
-            Добро пожаловать!<br/> Я ваш AI-помощник для малого бизнеса.<br/>
-            Помогу составить бизнес-план, рассчитать финансовые показатели, 
-            оформить документы и ответить на вопросы по ведению бизнеса.
+        <img src={isRiskVision ? logoRiskVision : logo} alt="Logo AI" className="w-48 h-48 mb-4 opacity-50" />
+        <div className="text-center max-w-3xl">
+          <p className="text-foreground/70 text-base leading-relaxed">
+            {isRiskVision ? (
+              <>
+                Добро пожаловать в RiskVision!<br/> Я проведу глубокий анализ вашей бизнес-идеи, существующего бизнеса или плана действий.<br/>
+                Выявлю все потенциальные риски и слабые точки по категориям: финансовые, рыночные, операционные, юридические и стратегические риски.
+              </>
+            ) : (
+              <>
+                Добро пожаловать!<br/> Я ваш AI-помощник для малого бизнеса.<br/>
+                Помогу составить бизнес-план, рассчитать финансовые показатели,<br/>
+                оформить документы и ответить на вопросы по ведению бизнеса.
+              </>
+            )}
           </p>
         </div>
       </div>
 
       <div className="mt-auto w-[50vw] flex flex-col items-center">
-        <SuggestionCards
-          onSelect={handleSuggestionSelect}
-          isVisible={!isChatCreated}
-        />
+        {!isRiskVision && (
+          <SuggestionCards
+            onSelect={handleSuggestionSelect}
+            isVisible={!isChatCreated}
+          />
+        )}
+        {isRiskVision && (
+          <RiskVisionSuggestionCards
+            onSelect={handleRiskVisionSuggestionSelect}
+            isVisible={showRiskVisionSuggestions && !isChatCreated}
+          />
+        )}
         <form onSubmit={handleSubmit} className="w-full">
           <div className="flex items-center gap-3">
             <Input
@@ -54,7 +92,7 @@ export const ChatStartPage = () => {
               onChange={(e) => setPrompt(e.target.value)}
               value={prompt}
               disabled={isLoading}
-              placeholder={isLoading ? "Думаю над ответом..." : ""}
+              placeholder={isLoading ? "Думаю над ответом..." : isRiskVision ? "Опишите вашу бизнес-идею, существующий бизнес или план действий..." : ""}
             />
             <Button
               className="bg-secondary/40 rounded-full w-10 h-10 flex items-center justify-center"
