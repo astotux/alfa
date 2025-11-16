@@ -39,7 +39,6 @@ export const Header = () => {
     }
   };
 
-  // При открытии меню автоматически получаем токен, если пользователь не синхронизирован
   useEffect(() => {
     if (dropdownOpen && !syncToken && !isTokenLoading && !isSynced) {
       getSyncToken(undefined, {
@@ -49,7 +48,6 @@ export const Header = () => {
         },
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dropdownOpen, isSynced]);
 
   const telegramLink = syncToken && !isSynced

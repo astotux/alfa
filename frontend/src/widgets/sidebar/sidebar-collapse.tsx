@@ -39,14 +39,17 @@ export const SidebarCollapse = ({ data, title }: Props) => {
           {data.map((item, index) => (
             <SidebarMenuItem
               className={cn(
-                'list-none p-2! rounded-xl  hover:bg-primary/10 text-ellipsis overflow-hidden whitespace-nowrap',
+                'list-none rounded-xl text-ellipsis overflow-hidden whitespace-nowrap',
                 {
                   'bg-primary/10': pathname === item.link,
                 }
               )}
               key={index}
             >
-              <Link to={item.link}>
+              <Link
+                to={item.link}
+                className="block w-full p-2! hover:bg-primary/10 text-ellipsis overflow-hidden whitespace-nowrap"
+              >
                 <span>{item.title}</span>
               </Link>
             </SidebarMenuItem>
