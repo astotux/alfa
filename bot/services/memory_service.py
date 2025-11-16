@@ -20,6 +20,17 @@ class MemoryService:
         if user_id in self.memory:
             del self.memory[user_id]
 
+    def sync_from_messages(self, user_id: int, messages: list):
+        """Синхронизирует память с сообщениями из диалога"""
+        self.memory[user_id] = []
+        for msg in messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user":
+                self.memory[user_id].append(f"Пользователь: {content}")
+            elif role == "assistant":
+                self.memory[user_id].append(f"Ассистент: {content}")
+
     async def _summarize_memory(self, user_id: int):
         full_context = "\n".join(self.memory[user_id])
         summary_prompt = f"Сделай краткую выжимку из истории диалога, сохранив ключевые моменты: {full_context}"
