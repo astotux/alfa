@@ -1,6 +1,6 @@
 import { useCreateMessage } from '@/shared/hooks/queries/chat/use-create-message';
-import type { CreateMessageDto } from '@/shared/types/chat.type';
 import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { getAccessToken } from '@/shared/api/services/auth/token.service';
 
 export const useStreamLlm = ({
   chatId,
@@ -11,52 +11,125 @@ export const useStreamLlm = ({
   chatId: string;
   setAnswer: Dispatch<SetStateAction<string>>;
 }) => {
-  const esRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const { mutate } = useCreateMessage();
 
   const startStream = useCallback(
-    (prompt: string, skipUserMessage = false) => {
+    async (prompt: string, skipUserMessage = false) => {
       let assistantText = '';
       setAnswer('');
-      if (esRef.current) {
-        esRef.current.close();
+      
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
-      const url = `http://127.0.0.1:8000/api/stream?prompt=${encodeURIComponent(
-        prompt
-      )}`;
-      const es = new EventSource(url);
-      esRef.current = es;
+      
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
-      if (!skipUserMessage) {
+      if (!skipUserMessage && chatId) {
         mutate({ chatId, content: prompt, role: 'user' });
       }
 
-      es.onmessage = (e) => {
-        const raw = e.data;
+      const token = getAccessToken();
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+      const url = new URL(`${baseUrl}/api/stream`);
+      url.searchParams.append('prompt', prompt);
+      if (chatId) {
+        url.searchParams.append('chat_id', chatId);
+      }
 
-        if (raw === '[DONE]') {
-          mutate({ chatId, content: assistantText, role: 'assistant' });
-          es.close();
+      try {
+        console.log('Starting stream request to:', url.toString());
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+          signal: abortController.signal,
+        });
+
+        console.log('Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('HTTP error response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (!reader) {
+          throw new Error('No reader available');
+        }
+
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            console.log('Stream done, final text length:', assistantText.length);
+            if (chatId && assistantText) {
+              mutate({ chatId, content: assistantText, role: 'assistant' });
+            }
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) {
+              continue;
+            }
+
+            if (!trimmedLine.startsWith('data: ')) {
+              console.log('Skipping non-data line:', trimmedLine);
+              continue;
+            }
+
+            const data = trimmedLine.slice(6).trim();
+
+            if (data === '[DONE]') {
+              console.log('Received [DONE] signal');
+              if (chatId && assistantText) {
+                mutate({ chatId, content: assistantText, role: 'assistant' });
+              }
+              return;
+            }
+
+            try {
+              const obj = JSON.parse(data);
+              console.log('Parsed SSE data:', obj);
+              
+              if (obj.error) {
+                console.error('Error from server:', obj.error);
+                continue;
+              }
+              
+              const text = obj?.delta;
+              if (text) {
+                assistantText += text;
+                setAnswer((prev) => prev + text);
+              }
+            } catch (err) {
+              console.error('Failed to parse SSE data:', data, err);
+            }
+          }
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.log('Stream aborted');
           return;
         }
-
-        try {
-          const obj = JSON.parse(raw);
-          const text = obj?.delta;
-          if (text) {
-            assistantText += text;
-            setAnswer((prev) => prev + text);
-          }
-        } catch (err) {
-          console.error('Failed to parse SSE data:', raw, err);
-        }
-      };
-
-      es.onerror = (err) => {
-        console.error('EventSource error', err);
-        es.close();
-      };
+        console.error('Stream error', err);
+      }
     },
     [chatId, setAnswer, mutate]
   );
