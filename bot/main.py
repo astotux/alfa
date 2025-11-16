@@ -10,7 +10,13 @@ logging.basicConfig(level=logging.INFO)
 DATABASE_PATH = os.getenv("DATABASE_PATH", "DATABASE_PATH")
 
 from aiogram import Bot, Dispatcher
-from handlers import document_handler, message_handler
+from handlers import (
+    start_router,
+    button_router,
+    callback_router,
+    chat_router,
+    document_router
+)
 
 # Создаём экземпляр DBService с указанием пути
 from services.db_service import DBService
@@ -26,8 +32,11 @@ async def main():
     bot = Bot(token=token)
     dp = Dispatcher()
 
-    dp.include_router(message_handler.router)
-    dp.include_router(document_handler.router)
+    dp.include_router(start_router)
+    dp.include_router(button_router)
+    dp.include_router(callback_router)
+    dp.include_router(chat_router)
+    dp.include_router(document_router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
