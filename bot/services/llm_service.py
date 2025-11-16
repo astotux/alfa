@@ -17,10 +17,13 @@ async def get_llm_response(query: str, context: str, system_prompt: str) -> str:
     ]
 
     response = await client.chat.completions.create(
-        model="meta-llama/llama-3.1-70b-instruct",
+        model="tngtech/deepseek-r1t2-chimera:free",
         messages=messages,
         temperature=0.7,
         max_tokens=2000
     )
-
+    #model="deepseek/deepseek-chat-v3.1:free
+    #meta-llama/llama-3.2-3b-instruct:free
+    #qwen/qwen3-14b:free
+    #tngtech/deepseek-r1t2-chimera:free
     return response.choices[0].message.content
