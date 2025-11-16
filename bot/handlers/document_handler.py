@@ -4,7 +4,7 @@ import os
 import logging
 import asyncio
 import re
-from services.pdf_service import process_pdf_document
+from services.pdf_service import process_pdf_document, process_docx_document
 from contextlib import suppress
 
 router = Router()
@@ -69,7 +69,7 @@ class ProgressManager:
         if progress <= 10:
             return "_Подготовка к анализу..._"
         elif progress <= 40:
-            return "_Извлечение текста из PDF..._"
+            return "_Извлечение текста из документа..._"
         elif progress <= 85:
             return "_Анализ содержания документа ИИ..._"
         elif progress <= 95:
@@ -98,29 +98,57 @@ class ProgressManager:
 
 @router.message(F.document)
 async def handle_document(message: Message):
-    """Обработчик PDF-документов"""
+    """Обработчик документов (PDF и DOCX)"""
     document: Document = message.document
     progress_manager = ProgressManager(message)
 
     try:
-        # Проверка: это PDF?
-        if document.mime_type != "application/pdf" and not (
-                document.file_name and document.file_name.lower().endswith('.pdf')):
-            await message.answer(
-                "⚠️ **Поддерживаемые форматы**\n\n"
-                "Бот работает только с PDF-файлами. "
-                "Пожалуйста, отправьте документ с расширением .pdf",
-                parse_mode="Markdown"
-            )
+        # Определение типа файла
+        file_name = document.file_name or ""
+        file_name_lower = file_name.lower()
+        mime_type = document.mime_type or ""
+        
+        is_pdf = (
+            mime_type == "application/pdf" or 
+            file_name_lower.endswith('.pdf')
+        )
+        is_docx = (
+            mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or
+            file_name_lower.endswith('.docx')
+        )
+        
+        if not is_pdf and not is_docx:
+            # Проверяем, не старый ли это .doc файл
+            if file_name_lower.endswith('.doc'):
+                await message.answer(
+                    "⚠️ **Неподдерживаемый формат**\n\n"
+                    "Бот работает только с DOCX файлами (новый формат Word).\n"
+                    "Старые .doc файлы не поддерживаются.\n\n"
+                    "**Решение:**\n"
+                    "1. Откройте .doc файл в Microsoft Word\n"
+                    "2. Сохраните как .docx (Файл → Сохранить как → выберите .docx)\n"
+                    "3. Отправьте новый файл",
+                    parse_mode="Markdown"
+                )
+            else:
+                await message.answer(
+                    "⚠️ **Поддерживаемые форматы**\n\n"
+                    "Бот работает с PDF и DOCX файлами. "
+                    "Пожалуйста, отправьте документ с расширением .pdf или .docx",
+                    parse_mode="Markdown"
+                )
             return
+        
+        file_type = "PDF" if is_pdf else "DOCX"
 
         # Инициализация прогресса
         await progress_manager.update("Получение файла от Telegram", 5)
 
         # Генерация безопасного имени файла
         user_id = message.from_user.id
-        original_filename = document.file_name or "document.pdf"
-        safe_filename = f"{user_id}_{abs(hash(original_filename)) % 10000}.pdf"
+        original_filename = document.file_name or f"document.{'pdf' if is_pdf else 'docx'}"
+        file_ext = "pdf" if is_pdf else "docx"
+        safe_filename = f"{user_id}_{abs(hash(original_filename)) % 10000}.{file_ext}"
         input_path = os.path.join(TEMP_DIR, safe_filename)
 
         # Скачивание файла
@@ -154,11 +182,18 @@ async def handle_document(message: Message):
             await progress_manager.update(f"Запрос: {short_instruction}", 25)
 
         # Анализ документа
-        analysis_result = await process_pdf_document(
-            input_path,
-            instruction,
-            lambda text, progress: progress_manager.update(text, progress)
-        )
+        if is_pdf:
+            analysis_result = await process_pdf_document(
+                input_path,
+                instruction,
+                lambda text, progress: progress_manager.update(text, progress)
+            )
+        else:
+            analysis_result = await process_docx_document(
+                input_path,
+                instruction,
+                lambda text, progress: progress_manager.update(text, progress)
+            )
 
         # Отправка результата
         await progress_manager.finish()
@@ -168,8 +203,8 @@ async def handle_document(message: Message):
 
     except ValueError as e:
         error_text = str(e)
-        logger.warning(f"Ошибка обработки PDF: {error_text}")
-        await handle_processing_error(message, error_text)
+        logger.warning(f"Ошибка обработки документа: {error_text}")
+        await handle_processing_error(message, error_text, file_type if 'file_type' in locals() else "DOCUMENT")
 
     except Exception as e:
         logger.exception(f"Критическая ошибка обработки: {str(e)}")
@@ -237,25 +272,45 @@ async def send_analysis_result(message: Message, analysis: str):
         )
 
 
-async def handle_processing_error(message: Message, error_text: str):
+async def handle_processing_error(message: Message, error_text: str, file_type: str = "DOCUMENT"):
     """Обрабатывает ошибки обработки и отправляет пользователю понятное сообщение"""
     error_lower = error_text.lower()
+    doc_type = "PDF" if "pdf" in file_type.lower() else "DOCX" if "docx" in file_type.lower() else "документ"
 
-    if any(word in error_lower for word in ["паролем", "защищен", "encrypted"]):
-        response = (
-            "🔒 Ошибка: защищенный PDF\n\n"
-            "Документ защищен паролем. Для анализа необходимо снять защиту:\n"
-            "1. Откройте PDF в Adobe Acrobat Reader\n"
-            "2. Перейдите в меню «Файл» → «Свойства»\n"
-            "3. На вкладке «Безопасность» выберите «Без защиты»\n"
-            "4. Сохраните документ и отправьте повторно"
-        )
+    if any(word in error_lower for word in ["паролем", "защищен", "encrypted", "protected"]):
+        if "pdf" in doc_type.lower():
+            response = (
+                "🔒 Ошибка: защищенный PDF\n\n"
+                "Документ защищен паролем. Для анализа необходимо снять защиту:\n"
+                "1. Откройте PDF в Adobe Acrobat Reader\n"
+                "2. Перейдите в меню «Файл» → «Свойства»\n"
+                "3. На вкладке «Безопасность» выберите «Без защиты»\n"
+                "4. Сохраните документ и отправьте повторно"
+            )
+        else:
+            response = (
+                "🔒 Ошибка: защищенный документ\n\n"
+                "DOCX документ защищен паролем. Для анализа необходимо снять защиту:\n"
+                "1. Откройте документ в Microsoft Word\n"
+                "2. Перейдите в «Файл» → «Сведения» → «Защита документа»\n"
+                "3. Снимите защиту документа\n"
+                "4. Сохраните документ и отправьте повторно"
+            )
     elif any(word in error_lower for word in ["скан", "изображени", "image", "ocr"]):
         response = (
-            "🖼️ Ошибка: сканированный документ\n\n"
-            "Бот анализирует только текстовые PDF-файлы. "
+            f"🖼️ Ошибка: сканированный документ\n\n"
+            f"Бот анализирует только текстовые {doc_type} файлы. "
             "Для сканов необходимо выполнить OCR-распознавание:\n"
             "• После преобразования отправьте текстовую версию"
+        )
+    elif any(word in error_lower for word in ["поврежден", "corrupt", "damaged", "неверный формат"]):
+        response = (
+            f"❌ Ошибка: поврежденный файл\n\n"
+            f"{doc_type} файл поврежден или имеет неверный формат.\n"
+            "Проверьте целостность файла и попробуйте:\n"
+            "1. Открыть файл в соответствующей программе\n"
+            "2. Сохранить файл заново\n"
+            "3. Отправить файл повторно"
         )
     elif any(word in error_lower for word in ["размер", "больш", "15mb", "мегабайт"]):
         response = (
@@ -282,7 +337,7 @@ async def handle_processing_error(message: Message, error_text: str):
         response = (
             "❌ Ошибка обработки\n\n"
             f"{error_text.capitalize()}\n\n"
-            "Пожалуйста, проверьте корректность PDF-файла "
+            f"Пожалуйста, проверьте корректность {doc_type} файла "
             "и попробуйте отправить его еще раз."
         )
 

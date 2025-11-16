@@ -10,8 +10,8 @@ from .constants import CHATS_PER_PAGE
 
 
 # Основная клавиатура с кнопками
-sync_button = KeyboardButton(text="📥 Синхронизировать диалог")
-clear_button = KeyboardButton(text="🗑️ Очистить историю")
+sync_button = KeyboardButton(text="📥 Список чатов")
+clear_button = KeyboardButton(text="🆕 Новый диалог")
 main_kb = ReplyKeyboardMarkup(
     keyboard=[[sync_button], [clear_button]],
     resize_keyboard=True,

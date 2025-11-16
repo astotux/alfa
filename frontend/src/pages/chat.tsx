@@ -12,7 +12,7 @@ export const ChatPage = () => {
   const { data } = useGetChat(id || '');
 
   const [answer, setAnswer] = useState<string>('');
-  const { startStream } = useStreamLlm({
+  const { startStream, isLoading } = useStreamLlm({
     chatId: id || '',
     setAnswer,
   });
@@ -35,7 +35,12 @@ export const ChatPage = () => {
   return (
     <div className="flex flex-col pt-2 h-full relative">
       <ChatListMessage answer={answer} messages={data?.messages || []} />
-      <PromptInput setAnswer={setAnswer} chatId={id || ''} />
+      <PromptInput 
+        setAnswer={setAnswer} 
+        chatId={id || ''} 
+        isLoading={isLoading}
+        externalStartStream={startStream}
+      />
     </div>
   );
 };

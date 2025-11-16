@@ -1,9 +1,10 @@
 """Обработчики callback запросов"""
 
 from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, BufferedInputFile
 from services.memory_service import memory
 from services.db_service import db
+from services.chat_image_service import chat_image_service
 from .keyboards import build_chats_keyboard
 from .sessions import sync_sessions, user_chat_sessions
 
@@ -72,7 +73,7 @@ async def start_new_chat_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("sync_chat_"))
 async def sync_chat_callback(callback: CallbackQuery):
-    """Обрабатывает выбор диалога для синхронизации"""
+    """Обрабатывает выбор диалога для синхронизации и показывает историю чата"""
     chat_id = callback.data.replace("sync_chat_", "")
     telegram_id = callback.from_user.id
     
@@ -86,6 +87,65 @@ async def sync_chat_callback(callback: CallbackQuery):
             # Очищаем session
             if telegram_id in sync_sessions:
                 del sync_sessions[telegram_id]
+            return
+        
+        # Генерируем изображения истории чата
+        await callback.answer("⏳ Генерирую изображения истории чата...")
+        
+        # Сохраняем ссылки перед удалением сообщения
+        bot = callback.bot
+        chat_id_for_send = callback.message.chat.id
+        
+        # Получаем username пользователя
+        username = None
+        try:
+            username = await db.get_username_by_telegram_id(telegram_id)
+        except Exception as e:
+            print(f"[WARNING] Не удалось получить username: {e}")
+        
+        try:
+            chat_images = chat_image_service.generate_chat_images(messages, username)
+            
+            if not chat_images:
+                await bot.send_message(
+                    chat_id_for_send,
+                    "❌ Не удалось создать изображения истории чата"
+                )
+                return
+            
+            # Удаляем сообщение с кнопками
+            try:
+                await callback.message.delete()
+            except:
+                pass
+            
+            # Отправляем все изображения
+            for i, img_bytes in enumerate(chat_images):
+                img_bytes.seek(0)
+                photo = BufferedInputFile(
+                    img_bytes.read(),
+                    filename=f"chat_history_{i+1}.png"
+                )
+                
+                if len(chat_images) > 1:
+                    caption = f"📖 История диалога (часть {i+1} из {len(chat_images)})"
+                else:
+                    caption = f"📖 История диалога"
+                
+                await bot.send_photo(chat_id_for_send, photo, caption=caption)
+            
+        except Exception as img_error:
+            print(f"[ERROR] Ошибка при генерации изображений: {img_error}")
+            import traceback
+            traceback.print_exc()
+            try:
+                await bot.send_message(
+                    chat_id_for_send,
+                    f"❌ Ошибка при создании изображений истории чата.\n"
+                    f"Ошибка: {str(img_error)}"
+                )
+            except:
+                pass
             return
         
         # Синхронизируем память с сообщениями из диалога
@@ -103,8 +163,9 @@ async def sync_chat_callback(callback: CallbackQuery):
         if telegram_id in sync_sessions:
             del sync_sessions[telegram_id]
         
-        await callback.answer("✅ Диалог успешно синхронизирован!")
-        await callback.message.edit_text(
+        # Отправляем подтверждение синхронизации
+        await bot.send_message(
+            chat_id_for_send,
             f"✅ Диалог синхронизирован!\n"
             f"Загружено сообщений: {len(messages)}\n\n"
             f"Теперь вы можете продолжить этот диалог."
@@ -112,6 +173,8 @@ async def sync_chat_callback(callback: CallbackQuery):
         
     except Exception as e:
         print(f"[ERROR] Ошибка при синхронизации диалога: {e}")
+        import traceback
+        traceback.print_exc()
         await callback.answer("❌ Ошибка при синхронизации", show_alert=True)
         # Очищаем session при ошибке
         if telegram_id in sync_sessions:
