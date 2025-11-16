@@ -2,6 +2,7 @@ import type { Message } from "./message.type";
 
 export type CreateChatDto = {
   question: string;
+  chat_type?: string;
 };
 
 export type CreateChatResponse = {
@@ -28,6 +29,7 @@ export type ChatListItem = {
   title: string;
   createdAt: string;
   updatedAt: string;
+  chatType?: string;
 };
 
 export type GetChatsResponse = ChatListItem[];

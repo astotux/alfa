@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-export const useCreateChat = () => {
+export const useCreateChat = (baseRoute: string = ROUTES.CHAT) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -15,10 +15,16 @@ export const useCreateChat = () => {
     mutationFn: (dto: CreateChatDto) => chatService.createChat(dto),
 
     onSuccess: ({ data }) => {
+      const isRiskVision = baseRoute === ROUTES.RISK_VISION;
       queryClient.invalidateQueries({ 
         queryKey: [QUERY_KEYS.CHAT.GET_CHATS] 
       });
-      navigate(`${ROUTES.CHAT}/${data.chatId}`);
+      if (isRiskVision) {
+        queryClient.invalidateQueries({ 
+          queryKey: [QUERY_KEYS.CHAT.GET_RISK_ANALYSES] 
+        });
+      }
+      navigate(`${baseRoute}/${data.chatId}`);
     },
 
     onError: () => {

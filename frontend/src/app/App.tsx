@@ -24,6 +24,8 @@ function App() {
         >
           <Route index path={ROUTES.CHAT} element={<ChatStartPage />} />
           <Route index path={ROUTES.CHAT_ID} element={<ChatPage />} />
+          <Route path={ROUTES.RISK_VISION} element={<ChatStartPage />} />
+          <Route path={ROUTES.RISK_VISION_ID} element={<ChatPage />} />
         </Route>
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
         <Route path={ROUTES.REGISTER} element={<RegisterPage />} />

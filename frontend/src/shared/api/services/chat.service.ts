@@ -9,8 +9,8 @@ import type {
 } from '@/shared/types/chat.type';
 
 class ChatService {
-  async getChats() {
-    return await axiosWithAuth.get<GetChatsResponse>(API_URL.chat.getChats());
+  async getChats(chatType?: string) {
+    return await axiosWithAuth.get<GetChatsResponse>(API_URL.chat.getChats(chatType));
   }
 
   async getChat({ id }: { id: string }) {
