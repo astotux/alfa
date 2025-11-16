@@ -2,6 +2,8 @@ import aiosqlite
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from uuid import uuid4
+from datetime import datetime
 
 load_dotenv()
 
@@ -117,6 +119,59 @@ class DBService:
                 {"role": row[0], "content": row[1]}
                 for row in rows
             ]
+
+    async def create_chat(self, user_id: str, title: str = None) -> str:
+        """Создает новый чат и возвращает его ID"""
+        if not self.db_path:
+            raise ValueError("Путь к базе данных не установлен")
+        
+        chat_id = str(uuid4())
+        now = datetime.now()
+        
+        async with aiosqlite.connect(self.db_path) as conn:
+            await conn.execute(
+                "INSERT INTO chats (id, title, userId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)",
+                (chat_id, title, user_id, now, now)
+            )
+            await conn.commit()
+        
+        return chat_id
+
+    async def create_message(self, chat_id: str, role: str, content: str) -> str:
+        """Создает новое сообщение в чате и возвращает его ID"""
+        if not self.db_path:
+            raise ValueError("Путь к базе данных не установлен")
+        
+        message_id = str(uuid4())
+        now = datetime.now()
+        
+        async with aiosqlite.connect(self.db_path) as conn:
+            # Создаем сообщение
+            await conn.execute(
+                "INSERT INTO messages (id, chatId, role, content, createdAt) VALUES (?, ?, ?, ?, ?)",
+                (message_id, chat_id, role, content, now)
+            )
+            # Обновляем updatedAt чата
+            await conn.execute(
+                "UPDATE chats SET updatedAt = ? WHERE id = ?",
+                (now, chat_id)
+            )
+            await conn.commit()
+        
+        return message_id
+
+    async def get_current_chat_id(self, user_id: str) -> str:
+        """Получает ID последнего активного чата пользователя"""
+        if not self.db_path:
+            raise ValueError("Путь к базе данных не установлен")
+        
+        async with aiosqlite.connect(self.db_path) as conn:
+            cursor = await conn.execute(
+                "SELECT id FROM chats WHERE userId = ? ORDER BY updatedAt DESC LIMIT 1",
+                (user_id,)
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else None
 
 # === ВАЖНО: создаём глобальный экземпляр ===
 print(f"[INFO] Создание глобального экземпляра DBService с DATABASE_PATH: {DATABASE_PATH}")

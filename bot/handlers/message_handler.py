@@ -9,13 +9,19 @@ import re
 
 router = Router()
 
+# Session для хранения состояния пагинации чатов
+# Структура: {telegram_id: {"chats": [...], "current_page": 0, "message_id": ...}}
 sync_sessions = {}
+
+# Session для хранения текущего chat_id пользователя
+# Структура: {telegram_id: {"chat_id": "...", "user_id": "..."}}
+user_chat_sessions = {}
 
 CHATS_PER_PAGE = 5
 
 # Клавиатура с кнопками
-clear_button = KeyboardButton(text="🗑️ Очистить историю")
 sync_button = KeyboardButton(text="📥 Синхронизировать диалог")
+clear_button = KeyboardButton(text="🗑️ Очистить историю")
 main_kb = ReplyKeyboardMarkup(
     keyboard=[[sync_button],[clear_button]],
     resize_keyboard=True,
@@ -67,8 +73,13 @@ async def handle_start(message: Message):
 
 @router.message(F.text == "🗑️ Очистить историю")
 async def clear_history(message: Message):
-    user_id = message.from_user.id
-    memory.clear(user_id)
+    telegram_id = message.from_user.id
+    memory.clear(telegram_id)
+    
+    # Очищаем текущий chat_id из session (будет создан новый при следующем сообщении)
+    if telegram_id in user_chat_sessions:
+        del user_chat_sessions[telegram_id]
+    
     await message.answer("✅ История диалога успешно очищена!", reply_markup=main_kb)
 
 def build_chats_keyboard(chats: list, page: int) -> InlineKeyboardMarkup:
@@ -79,6 +90,7 @@ def build_chats_keyboard(chats: list, page: int) -> InlineKeyboardMarkup:
     
     keyboard = []
     
+    # Добавляем кнопки с чатами для текущей страницы
     for chat in chats[start_idx:end_idx]:
         title = chat["title"][:50]  # Ограничиваем длину названия
         keyboard.append([
@@ -88,20 +100,24 @@ def build_chats_keyboard(chats: list, page: int) -> InlineKeyboardMarkup:
             )
         ])
     
+    # Добавляем кнопки навигации в один ряд
     if total_pages > 1:
         nav_buttons = []
         
+        # Кнопка "Назад" слева
         if page > 0:
             nav_buttons.append(InlineKeyboardButton(
                 text="◀️ Назад",
                 callback_data=f"sync_page_{page - 1}"
             ))
         
+        # Кнопка с номером страницы по середине
         nav_buttons.append(InlineKeyboardButton(
             text=f"📄 {page + 1}/{total_pages}",
             callback_data="sync_page_info"
         ))
         
+        # Кнопка "Вперед" справа
         if page < total_pages - 1:
             nav_buttons.append(InlineKeyboardButton(
                 text="Вперед ▶️",
@@ -110,6 +126,7 @@ def build_chats_keyboard(chats: list, page: int) -> InlineKeyboardMarkup:
         
         keyboard.append(nav_buttons)
     
+    # Кнопка "Начать новый диалог" снизу в отдельной строке
     keyboard.append([
         InlineKeyboardButton(
             text="🆕 Начать новый диалог",
@@ -132,7 +149,7 @@ async def sync_dialog(message: Message):
         if not user_id:
             await message.answer(
                 "⚠️ Ваш аккаунт не привязан к системе.\n"
-                "Используйте команду /start с токеном синхронизации для привязки аккаунта.",
+                "Привяжите аккаунт через наш сайт!",
                 reply_markup=main_kb
             )
             return
@@ -155,6 +172,7 @@ async def sync_dialog(message: Message):
             reply_markup=reply_markup
         )
         
+        # Сохраняем состояние в session
         sync_sessions[telegram_id] = {
             "chats": chats,
             "current_page": 0,
@@ -179,12 +197,14 @@ async def sync_page_info_callback(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("sync_page_"))
 async def sync_page_callback(callback: CallbackQuery):
     """Обрабатывает переключение страниц в списке диалогов"""
+    # Игнорируем кнопку с информацией о странице
     if callback.data == "sync_page_info":
         return
     
     telegram_id = callback.from_user.id
     page = int(callback.data.replace("sync_page_", ""))
     
+    # Получаем состояние из session
     if telegram_id not in sync_sessions:
         await callback.answer("❌ Сессия истекла. Нажмите кнопку синхронизации снова.", show_alert=True)
         return
@@ -192,8 +212,10 @@ async def sync_page_callback(callback: CallbackQuery):
     session = sync_sessions[telegram_id]
     chats = session["chats"]
     
+    # Обновляем страницу в session
     session["current_page"] = page
     
+    # Строим новую клавиатуру
     reply_markup = build_chats_keyboard(chats, page)
     
     await callback.answer()
@@ -207,8 +229,14 @@ async def start_new_chat_callback(callback: CallbackQuery):
     """Обрабатывает нажатие на кнопку 'Начать новый диалог'"""
     telegram_id = callback.from_user.id
     
+    # Очищаем память пользователя
     memory.clear(telegram_id)
     
+    # Очищаем текущий chat_id из session (будет создан новый при следующем сообщении)
+    if telegram_id in user_chat_sessions:
+        del user_chat_sessions[telegram_id]
+    
+    # Очищаем session синхронизации
     if telegram_id in sync_sessions:
         del sync_sessions[telegram_id]
     
@@ -231,6 +259,7 @@ async def sync_chat_callback(callback: CallbackQuery):
         if not messages:
             await callback.answer("Диалог пуст", show_alert=True)
             await callback.message.delete()
+            # Очищаем session
             if telegram_id in sync_sessions:
                 del sync_sessions[telegram_id]
             return
@@ -238,6 +267,15 @@ async def sync_chat_callback(callback: CallbackQuery):
         # Синхронизируем память с сообщениями из диалога
         memory.sync_from_messages(telegram_id, messages)
         
+        # Устанавливаем текущий chat_id в session
+        user_id = await db.get_user_id_by_telegram_id(telegram_id)
+        if user_id:
+            if telegram_id not in user_chat_sessions:
+                user_chat_sessions[telegram_id] = {}
+            user_chat_sessions[telegram_id]["chat_id"] = chat_id
+            user_chat_sessions[telegram_id]["user_id"] = user_id
+        
+        # Очищаем session после выбора
         if telegram_id in sync_sessions:
             del sync_sessions[telegram_id]
         
@@ -251,6 +289,7 @@ async def sync_chat_callback(callback: CallbackQuery):
     except Exception as e:
         print(f"[ERROR] Ошибка при синхронизации диалога: {e}")
         await callback.answer("❌ Ошибка при синхронизации", show_alert=True)
+        # Очищаем session при ошибке
         if telegram_id in sync_sessions:
             del sync_sessions[telegram_id]
 
@@ -262,8 +301,48 @@ async def handle_message(message: Message):
     if user_query in ["🗑️ Очистить историю", "📥 Синхронизировать диалог"]:
         return
 
-    user_id = message.from_user.id
-    context = memory.get_summary(user_id)
+    telegram_id = message.from_user.id
+    
+    # Пытаемся получить user_id из БД (может быть None, если пользователь не авторизован)
+    user_id = None
+    try:
+        user_id = await db.get_user_id_by_telegram_id(telegram_id)
+    except Exception as e:
+        print(f"[ERROR] Ошибка при получении user_id: {e}")
+        # Продолжаем работу без сохранения в БД
+
+    # Получаем или создаем chat_id (только для авторизованных пользователей)
+    chat_id = None
+    if user_id:
+        # Пользователь авторизован - работаем с БД
+        if telegram_id in user_chat_sessions:
+            chat_id = user_chat_sessions[telegram_id].get("chat_id")
+        
+        # Если нет активного чата, создаем новый
+        if not chat_id:
+            try:
+                # Используем первые 100 символов запроса как заголовок
+                title = user_query[:100] if len(user_query) > 0 else "Новый диалог"
+                chat_id = await db.create_chat(user_id, title)
+                
+                # Сохраняем в session
+                if telegram_id not in user_chat_sessions:
+                    user_chat_sessions[telegram_id] = {}
+                user_chat_sessions[telegram_id]["chat_id"] = chat_id
+                user_chat_sessions[telegram_id]["user_id"] = user_id
+            except Exception as e:
+                print(f"[ERROR] Ошибка при создании чата: {e}")
+                # Продолжаем работу без сохранения в БД
+
+        # Сохраняем сообщение пользователя в БД
+        if chat_id:
+            try:
+                await db.create_message(chat_id, "user", user_query)
+            except Exception as e:
+                print(f"[ERROR] Ошибка при сохранении сообщения пользователя: {e}")
+
+    # Работаем с памятью (для всех пользователей - авторизованных и неавторизованных)
+    context = memory.get_summary(telegram_id)
 
     # Определяем, юридический ли запрос
     is_legal_query = any(word in user_query.lower() for word in LEGAL_KEYWORDS)
@@ -295,8 +374,15 @@ async def handle_message(message: Message):
     else:
         response = full_response
 
-    # Сохраняем в память
-    memory.add_message(user_id, f"Пользователь: {user_query}\nАссистент: {response}")
+    # Сохраняем сообщение ассистента в БД (только для авторизованных пользователей)
+    if chat_id and user_id:
+        try:
+            await db.create_message(chat_id, "assistant", response)
+        except Exception as e:
+            print(f"[ERROR] Ошибка при сохранении сообщения ассистента: {e}")
+
+    # Сохраняем в память (для всех пользователей)
+    memory.add_message(telegram_id, f"Пользователь: {user_query}\nАссистент: {response}")
 
     # Отправляем ответ частями (ограничение Telegram — 4096 символов)
     for i in range(0, len(response), 4000):
