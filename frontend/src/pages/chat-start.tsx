@@ -29,6 +29,13 @@ export const ChatStartPage = () => {
     <div className="h-full flex flex-col items-center justify-center pb-5">
       <div className="flex flex-col items-center pt-40">
         <img src={logo} alt="Logo AI" className="w-48 h-48 mb-4 opacity-50" />
+        <div className="text-center max-w-xl px-6">
+          <p className="text-foreground/60 text-sm leading-relaxed">
+            Добро пожаловать!<br/> Я ваш AI-помощник для малого бизнеса.<br/>
+            Помогу составить бизнес-план, рассчитать финансовые показатели, 
+            оформить документы и ответить на вопросы по ведению бизнеса.
+          </p>
+        </div>
       </div>
 
       <div className="mt-auto w-[50vw] flex flex-col items-center">
