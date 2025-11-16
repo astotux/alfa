@@ -1,5 +1,5 @@
 import { useCreateMessage } from '@/shared/hooks/queries/chat/use-create-message';
-import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { getAccessToken } from '@/shared/api/services/auth/token.service';
 
 export const useStreamLlm = ({
@@ -12,6 +12,7 @@ export const useStreamLlm = ({
   setAnswer: Dispatch<SetStateAction<string>>;
 }) => {
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { mutate } = useCreateMessage();
 
@@ -19,6 +20,7 @@ export const useStreamLlm = ({
     async (prompt: string, skipUserMessage = false) => {
       let assistantText = '';
       setAnswer('');
+      setIsLoading(true);
       
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -75,6 +77,7 @@ export const useStreamLlm = ({
             if (chatId && assistantText) {
               mutate({ chatId, content: assistantText, role: 'assistant' });
             }
+            setIsLoading(false);
             break;
           }
 
@@ -101,6 +104,7 @@ export const useStreamLlm = ({
               if (chatId && assistantText) {
                 mutate({ chatId, content: assistantText, role: 'assistant' });
               }
+              setIsLoading(false);
               return;
             }
 
@@ -126,17 +130,20 @@ export const useStreamLlm = ({
       } catch (err: any) {
         if (err.name === 'AbortError') {
           console.log('Stream aborted');
+          setIsLoading(false);
           return;
         }
         console.error('Stream error', err);
+        setIsLoading(false);
       }
     },
     [chatId, setAnswer, mutate]
   );
 
   const handleSubmit = async (prompt: string) => {
+    if (isLoading) return;
     startStream(prompt);
   };
 
-  return { handleSubmit, startStream };
+  return { handleSubmit, startStream, isLoading };
 };

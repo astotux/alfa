@@ -9,18 +9,22 @@ import { SuggestionCards } from '@/features/chat/suggestion-cards';
 export const ChatStartPage = () => {
   const [prompt, setPrompt] = useState('');
   const [isChatCreated, setIsChatCreated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { mutate } = useCreateChat();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || isLoading) return;
+    setIsLoading(true);
     setIsChatCreated(true);
     mutate({ question: prompt });
     setPrompt('');
   };
 
   const handleSuggestionSelect = (suggestion: string) => {
+    if (isLoading) return;
+    setIsLoading(true);
     setIsChatCreated(true);
     mutate({ question: suggestion });
   };
@@ -49,10 +53,13 @@ export const ChatStartPage = () => {
               className="rounded-xl h-10"
               onChange={(e) => setPrompt(e.target.value)}
               value={prompt}
+              disabled={isLoading}
+              placeholder={isLoading ? "Думаю над ответом..." : ""}
             />
             <Button
               className="bg-secondary/40 rounded-full w-10 h-10 flex items-center justify-center"
               type="submit"
+              disabled={isLoading}
             >
               <Send className="size-4 relative -left-[1px] -bottom-[1px]" />
             </Button>
