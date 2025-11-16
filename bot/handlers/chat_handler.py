@@ -26,7 +26,7 @@ async def handle_message(message: Message):
     
     # Проверяем, есть ли уже активный запрос от этого пользователя
     if active_requests.get(telegram_id, False):
-        await message.answer("⏳ Я сейчас занят, думаю как ответить тебе на твой запрос...")
+        await message.answer("⏳ Я сейчас занят, думаю как ответить вам на ваш предыдущий запрос...")
         return
     
     # Устанавливаем флаг активного запроса
