@@ -1,19 +1,19 @@
 from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart
 from services.llm_service import get_llm_response
 from services.memory_service import memory
 from services.db_service import db
 from utils.disclaimers import LEGAL_DISCLAIMER
-from services.db_service import db
 import re
 
 router = Router()
 
-# Клавиатура с кнопкой очистки
+# Клавиатура с кнопками
 clear_button = KeyboardButton(text="🗑️ Очистить историю")
+sync_button = KeyboardButton(text="📥 Синхронизировать диалог")
 main_kb = ReplyKeyboardMarkup(
-    keyboard=[[clear_button]],
+    keyboard=[[clear_button, sync_button]],
     resize_keyboard=True,
     one_time_keyboard=False
 )
@@ -155,8 +155,8 @@ async def sync_chat_callback(callback: CallbackQuery):
 async def handle_message(message: Message):
     user_query = message.text.strip()
 
-    # Игнорируем кнопку (на случай дублирования)
-    if user_query == "🗑️ Очистить историю":
+    # Игнорируем кнопки (на случай дублирования)
+    if user_query in ["🗑️ Очистить историю", "📥 Синхронизировать диалог"]:
         return
 
     user_id = message.from_user.id
@@ -168,7 +168,7 @@ async def handle_message(message: Message):
     if is_legal_query:
         system_prompt = (
             "Ты юридический консультант для малого бизнеса. Объясняй законы и нормы простым языком. "
-            "Всегда напоминай, что не являешься профессиональным юристом."
+            ""
         )
     else:
         system_prompt = (

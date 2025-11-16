@@ -1,14 +1,59 @@
 import aiosqlite
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_PATH = os.getenv("DATABASE_PATH")
+# Получаем путь к базе данных из .env или используем относительный путь
+DATABASE_PATH_ENV = os.getenv("DATABASE_PATH")
+
+if DATABASE_PATH_ENV:
+    # Если путь указан в .env, используем его
+    if os.path.isabs(DATABASE_PATH_ENV):
+        # Абсолютный путь
+        DATABASE_PATH = DATABASE_PATH_ENV
+    else:
+        # Относительный путь - вычисляем относительно папки бота
+        bot_dir = Path(__file__).parent.parent  # Переходим из services/ в bot/
+        DATABASE_PATH = str(bot_dir / DATABASE_PATH_ENV)
+else:
+    # Если не указан в .env, используем путь по умолчанию
+    bot_dir = Path(__file__).parent.parent  # Переходим из services/ в bot/
+    DATABASE_PATH = str(bot_dir / ".." / "backend" / "llm.db")
+
+# Преобразуем путь в абсолютный и нормализуем
+DATABASE_PATH = str(Path(DATABASE_PATH).resolve())
 
 class DBService:
     def __init__(self, db_path: str):
-        self.db_path = db_path
+        # Если передан относительный путь или это не реальный путь, вычисляем относительно папки бота
+        if db_path == "DATABASE_PATH" or not os.path.isabs(db_path):
+            # Вычисляем путь относительно папки бота
+            bot_dir = Path(__file__).parent.parent  # Переходим из services/ в bot/
+            if db_path == "DATABASE_PATH":
+                # Используем путь по умолчанию
+                self.db_path = str((bot_dir / ".." / "backend" / "llm.db").resolve())
+            else:
+                self.db_path = str(Path(bot_dir / db_path).resolve())
+        else:
+            self.db_path = str(Path(db_path).resolve())
+        
+        # Проверяем существование файла
+        if not os.path.exists(self.db_path):
+            print(f"[WARNING] База данных не найдена по пути: {self.db_path}")
+            print(f"[WARNING] Текущая рабочая директория: {os.getcwd()}")
+            print(f"[WARNING] Попытка использовать путь по умолчанию...")
+            # Пробуем путь по умолчанию
+            bot_dir = Path(__file__).parent.parent
+            default_path = str((bot_dir / ".." / "backend" / "llm.db").resolve())
+            if os.path.exists(default_path):
+                self.db_path = default_path
+                print(f"[INFO] Использован путь по умолчанию: {self.db_path}")
+            else:
+                raise FileNotFoundError(f"❌ База данных не найдена по пути: {self.db_path}\nПроверенный путь по умолчанию: {default_path}")
+        
+        print(f"[INFO] DBService инициализирован с путем: {self.db_path}")
 
     async def get_user_by_token(self, token: str):
         async with aiosqlite.connect(self.db_path) as db:
@@ -74,4 +119,5 @@ class DBService:
             ]
 
 # === ВАЖНО: создаём глобальный экземпляр ===
+print(f"[INFO] Создание глобального экземпляра DBService с DATABASE_PATH: {DATABASE_PATH}")
 db = DBService(DATABASE_PATH)
