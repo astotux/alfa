@@ -15,28 +15,19 @@
 
 ### Сборка и запуск
 
-Запускайте из этой директории
+1. Клонируйте репозиторий:
+   ```
+   git clone https://github.com/astotux/alfa.git
+   ```
+2. Добавить все .env из приложенного .pdf файла
 
-1. Скачайте образы:
+3. Соберите и запустите все сервисы внутри директории alfa:
    ```
-   docker load -i alfa-app.tar
+   docker compose up --build
    ```
-2. Соберите и запустите все сервисы:
-   ```
-   docker compose up
-   ```
-3. После успешного запуска сервисы будут доступны по адресам:
-   - Backend API — `http://localhost:8000`
+4. После успешного запуска сервисы будут доступны по адресам:
    - Frontend — `http://localhost:5173`
-4. Файл `llm.db` из `backend/` монтируется в контейнеры `backend` и `bot`, поэтому данные SQLite остаются на хосте и общие для обоих сервисов.
-
-При необходимости можно собрать образы по отдельности:
-
-- Backend: `docker build -f backend/Dockerfile -t alfa-backend .`
-- Bot: `docker build -f bot/Dockerfile -t alfa-bot .`
-- Frontend: `docker build -f frontend/Dockerfile -t alfa-frontend .`
-
-После сборки запускайте контейнеры с нужными переменными окружения или `.env` файлами.
+   - Telegram Bot — `https://t.me/alfaassistant_bot`
 
 ## 🏗️ Архитектура проекта
 
