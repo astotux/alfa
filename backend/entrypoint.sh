@@ -11,5 +11,17 @@ if [ -f .env ]; then
     rm -f "$TMP_ENV"
 fi
 
+DB_PATH="/app/llm.db"
+
+if [ -d "$DB_PATH" ]; then
+    echo "Detected directory at $DB_PATH. Replacing it with a SQLite file."
+    rm -rf "$DB_PATH"
+fi
+
+if [ ! -f "$DB_PATH" ]; then
+    touch "$DB_PATH"
+    chmod 664 "$DB_PATH"
+fi
+
 exec "$@"
 

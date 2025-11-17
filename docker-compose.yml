@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: bot/Dockerfile
-    env_file:
+    env_file: 
       - bot/.env
     environment:
       DATABASE_PATH: /data/llm.db
