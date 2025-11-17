@@ -11,7 +11,7 @@ import { API_URL } from '../config/api-url';
 import type { LoginResponse } from '../types/auth.type';
 
 const options: CreateAxiosDefaults = {
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },
