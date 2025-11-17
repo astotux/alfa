@@ -6,6 +6,7 @@ export const QUERY_KEYS = {
   AUTH: {
     REGISTER: 'register',
     LOGIN: 'login',
+    LOGOUT: 'logout',
   },
   CHAT: {
     CREATE_CHAT: 'createChat',

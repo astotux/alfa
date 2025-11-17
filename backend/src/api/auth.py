@@ -96,3 +96,8 @@ def refresh(
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
     }
+
+
+@router.post("/logout")
+def logout():
+    return {"message": "Logged out"}

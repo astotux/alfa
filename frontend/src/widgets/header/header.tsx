@@ -14,12 +14,13 @@ import {
 } from '@/shared/ui/dialog';
 import { SidebarTrigger } from '@/shared/ui/sidebar';
 import { cn } from '@/shared/utils/cn';
-import { Ellipsis, Trash, Link2 } from 'lucide-react';
+import { Ellipsis, Trash, Link2, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDeleteChat } from '@/shared/hooks/queries/chat/use-delete-chat';
 import { useGetSyncToken } from '@/shared/hooks/queries/user/use-get-sync-token';
 import { useGetProfile } from '@/shared/hooks/queries/user/use-get-profile';
+import { useLogout } from '@/shared/hooks/queries/auth/use-logout';
 
 export const Header = () => {
   const { id } = useParams();
@@ -29,6 +30,7 @@ export const Header = () => {
   const { mutate: deleteChat, isPending } = useDeleteChat();
   const { mutate: getSyncToken, isPending: isTokenLoading } = useGetSyncToken();
   const { data: profile } = useGetProfile();
+  const { mutate: logout, isPending: isLogoutPending } = useLogout();
   
   const isSynced = profile?.data?.telegram_id !== null && profile?.data?.telegram_id !== undefined;
 
@@ -91,6 +93,16 @@ export const Header = () => {
                   <p className="text-sm">Удалить чат</p>
                 </DropdownAction>
               )}
+              <DropdownAction
+                type="dandger"
+                onClick={() => logout()}
+                disabled={isLogoutPending}
+              >
+                <LogOut className="size-4" />
+                <p className="text-sm">
+                  {isLogoutPending ? 'Выход...' : 'Выйти из аккаунта'}
+                </p>
+              </DropdownAction>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -130,15 +142,24 @@ type Props = {
   onClick?: () => void;
   type?: 'default' | 'dandger';
   children: React.ReactNode;
+  disabled?: boolean;
 };
-const DropdownAction = ({ children, onClick, type = 'default' }: Props) => {
+const DropdownAction = ({
+  children,
+  onClick,
+  type = 'default',
+  disabled = false,
+}: Props) => {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        'flex items-center gap-2 p-2 w-full rounded-xl cursor-pointer transition-all',
+        'flex items-center gap-2 p-2 w-full rounded-xl transition-all',
         {
           'text-destructive hover:bg-destructive/10  ': type === 'dandger',
+          'cursor-not-allowed opacity-60': disabled,
+          'cursor-pointer': !disabled,
         }
       )}
     >

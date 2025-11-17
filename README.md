@@ -10,6 +10,32 @@
 2. **Telegram Bot** — бот для взаимодействия с пользователями через Telegram
 3. **Frontend** — веб-приложение на React для работы с чатами и анализами
 
+
+## 🚢 Запуск через Docker и Docker Compose
+
+### Сборка и запуск
+
+1. Скачайте образы:
+   ```
+   docker load -i alfa-app.tar
+   ```
+2. Соберите и запустите все сервисы:
+   ```
+   docker compose up --build
+   ```
+3. После успешного запуска сервисы будут доступны по адресам:
+   - Backend API — `http://localhost:8000`
+   - Frontend — `http://localhost:5173`
+4. Файл `llm.db` из `backend/` монтируется в контейнеры `backend` и `bot`, поэтому данные SQLite остаются на хосте и общие для обоих сервисов.
+
+При необходимости можно собрать образы по отдельности:
+
+- Backend: `docker build -f backend/Dockerfile -t alfa-backend .`
+- Bot: `docker build -f bot/Dockerfile -t alfa-bot .`
+- Frontend: `docker build -f frontend/Dockerfile -t alfa-frontend .`
+
+После сборки запускайте контейнеры с нужными переменными окружения или `.env` файлами.
+
 ## 🏗️ Архитектура проекта
 
 ```
@@ -128,50 +154,6 @@ alfa/
    ```bash
    npm run build
    ```
-
-## 🚢 Запуск через Docker и Docker Compose
-
-> Перед сборкой создайте файлы `.env` в директориях `backend/`, `bot/` и `frontend/`. Ниже приведены минимальные примеры.
-
-### Примеры переменных окружения
-
-`backend/.env`
-```
-DATABASE_URL=sqlite:///./llm.db
-authjwt_secret_key=change-me
-OPENROUTER_API_KEY=your_openrouter_key
-```
-
-`bot/.env`
-```
-TELEGRAM_TOKEN=your_telegram_token
-OPENROUTER_API_KEY=your_openrouter_key
-DATABASE_PATH=/data/llm.db
-```
-
-`frontend/.env`
-```
-VITE_API_URL=http://backend:8000
-```
-
-### Сборка и запуск
-
-1. Соберите и запустите все сервисы:
-   ```
-   docker compose up --build
-   ```
-2. После успешного запуска сервисы будут доступны по адресам:
-   - Backend API — `http://localhost:8000`
-   - Frontend — `http://localhost:5173`
-3. Файл `llm.db` из `backend/` монтируется в контейнеры `backend` и `bot`, поэтому данные SQLite остаются на хосте и общие для обоих сервисов.
-
-При необходимости можно собрать образы по отдельности:
-
-- Backend: `docker build -f backend/Dockerfile -t alfa-backend .`
-- Bot: `docker build -f bot/Dockerfile -t alfa-bot .`
-- Frontend: `docker build -f frontend/Dockerfile -t alfa-frontend .`
-
-После сборки запускайте контейнеры с нужными переменными окружения или `.env` файлами.
 
 ## 🗄️ База данных
 
